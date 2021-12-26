@@ -2,6 +2,8 @@ package com.derivatemeasure.portal.Schedular;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import com.derivatemeasure.portal.Business.DerivateFilterResponse;
 import org.slf4j.Logger;
@@ -20,46 +22,44 @@ public class DerivateMeasureSchedular {
 	private static final Logger log = LoggerFactory.getLogger(DerivateMeasureSchedular.class);
 	
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+	ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
 	
 	@Autowired
-	private DerivateMeasureReadFiles derivateMeasureReadFiles;
+	DerivateMeasureReadFiles derivateMeasureReadFiles;
 
 	@Autowired
-	private DerivateFilterResponse derivateFilterResponse;
-	
-	@Scheduled(fixedRate = 1000*30, initialDelay = 1)
-	public void scheduledTradeGate() {
-		log.info("Execute derivate measure trade gate call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));  
-		derivateMeasureReadFiles.updateMapFromTradeGateCSV();
-	}
-	
-	@Scheduled(fixedRate = 1000*60*60, initialDelay = 1)
-	public void scheduledStammdatenAlle() {
-		log.info("Execute derivate measure stammdaten alle call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));  
-		derivateMeasureReadFiles.updateMapFromStammdatenAlleCSV();
-	}
-	
-	@Scheduled(fixedRate = 1000*60*60, initialDelay = 1)
-	public void scheduledPeerGroups() {
-		log.info("Execute derivate measure peer groups call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));  
-		derivateMeasureReadFiles.updateMapFromPeerGroupsCSV();
-	}
-	
-	@Scheduled(fixedRate = 1000*30, initialDelay = 1)
-	public void scheduledErgebnis() {
-		log.info("Execute derivate measure ergebnis call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));  
-		derivateMeasureReadFiles.updateMapFromErgebnisCSV();
+	DerivateFilterResponse derivateFilterResponse;
+
+	@Scheduled(fixedRate = 1000*60*30, initialDelay = 15000)
+	public void scheduledStammdatenAlleFromList() {
+		executor.submit(() -> {
+			log.info("Execute derivate measure stammdaten alle form list call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+			derivateMeasureReadFiles.getStammdatenAlleDateFromList();
+		});
 	}
 
-	@Scheduled(fixedRate = 1000*60*60, initialDelay = 10000)
+	@Scheduled(fixedRate = 1000*60*60, initialDelay = 30000)
 	public void scheduledDerivateFilterByKey() {
-		log.info("Execute derivate measure filter by key call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
-		derivateFilterResponse.findDerivateListByFilterKeyword();
+		executor.submit(() -> {
+			log.info("Execute derivate measure filter by key call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+			derivateFilterResponse.findDerivateListByFilterKeyword();
+		});
 	}
 
-	@Scheduled(fixedRate = 1000*60*60, initialDelay = 10000)
-	public void scheduledDerivateStammdatenAlleList() {
-		log.info("Execute derivate measure stammdaten alle prepeare list :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
-		derivateMeasureReadFiles.getFileDataFromStammdatenAlleCSV();
+	@Scheduled(fixedRate = 1000*60*60, initialDelay = 30000)
+	public void scheduledDerivateFilterByIntegerKey() {
+		executor.submit(() -> {
+			log.info("Execute derivate measure filter by integer key call for update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+			derivateFilterResponse.findDerivateListByFilterIntegerKeyword();
+		});
+	}
+
+	@Scheduled(fixedRate = 1000*30, initialDelay = 1000)
+	public void scheduledErgebnisFxvwd() {
+		executor.submit(() -> {
+			log.info("Execute derivate measure Ergebnis Fxvwd to update map :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+			derivateMeasureReadFiles.updateMapFromErgebnisFxvwdCSV();
+		});
 	}
 }

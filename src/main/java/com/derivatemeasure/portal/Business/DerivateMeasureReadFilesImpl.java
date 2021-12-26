@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.derivatemeasure.portal.Model.Currency;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,8 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 	Map<String, Derivative> stammdatenAlleMap = new ConcurrentHashMap<>();
 	Map<String, PeerGroup> peerGroupsMap = new ConcurrentHashMap<>();
 	Map<String, Derivative> ergebnisMap = new ConcurrentHashMap<>();
-	List<Derivative> stammdatenAlleDervatelist = Collections.synchronizedList(new ArrayList<>());
+	Set<Derivative> stammdatenAlleDervateSet = Collections.synchronizedSet(new HashSet<>());
+	Map<String, Currency> ergebnisFxvwdMap = new ConcurrentHashMap<>();
 
 	@Override
 	public Map<String, UnderLying> getFileDataFromTradeGateCSV() {
@@ -39,14 +41,12 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 	}
 
 	@Override
-	public List<Derivative> getFileDataFromStammdatenAlleCSV() {
+	public Set<Derivative> getFileDataFromStammdatenAlleCSV() {
 		try {
 			synchronized (this){
 				log.info("Start to read file data from stammdaten alle csv file.");
 				if(stammdatenAlleMap.size() == 0)
 					updateMapFromStammdatenAlleCSV();
-				if(ergebnisMap.size() == 0)
-					updateMapFromErgebnisCSV();
 				for (Entry<String, Derivative> derivate : stammdatenAlleMap.entrySet()) {
 					Derivative derivative = derivate.getValue();
 					derivative.setAsk(ergebnisMap.get(derivate.getKey()) != null ? ergebnisMap.get(derivate.getKey()).getAsk() : Double.valueOf(0));
@@ -60,20 +60,20 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 						long restDays = TimeUnit.DAYS.convert(derivative.getValdate().getTime() - new Date().getTime(), TimeUnit.MILLISECONDS);
 						derivative.setSidewaysReturnPa(calculateAnnualRate(calculateRate(Math.min(cap, underlyingAsk), derivativeAsk), restDays));
 					}
-					stammdatenAlleDervatelist.add(derivative);
+					stammdatenAlleDervateSet.add(derivative);
 				}
 			}
 		} catch (Exception e) {
 			log.error("Error getting while merge stammdaten alle and ergebnis and calculate data in derivative object : ",e);
 		}
-		return stammdatenAlleDervatelist;
+		return stammdatenAlleDervateSet;
 	}
 
 	@Override
-	public List<Derivative> getStammdatenAlleDateFromList() {
-		if(stammdatenAlleDervatelist.size() == 0)
+	public Set<Derivative> getStammdatenAlleDateFromList() {
+		if(stammdatenAlleDervateSet.size() == 0)
 			getFileDataFromStammdatenAlleCSV();
-		return stammdatenAlleDervatelist;
+		return stammdatenAlleDervateSet;
 	}
 
 	@Override
@@ -89,27 +89,39 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 	}
 
 	@Override
+	public Map<String, Currency> getFileDataFromErgebnisFxvwdCSV() {
+		log.info("Start to read file data from ergebnis fxvwd csv file.");
+		return fileReadingUtility.readFileDataFromErgebnisFxvwdCSV();
+	}
+
+	@Override
 	public void updateMapFromTradeGateCSV() {
-		log.info("Calling from schedular to read file data from trade gate csv file and update in map.");
-		tradeGateMap = fileReadingUtility.readFileDataFromTradeGateCSV();
+		do {
+			log.info("Calling from scheduler to read file data from trade gate csv file and update in map.");
+			tradeGateMap.clear();
+			tradeGateMap = fileReadingUtility.readFileDataFromTradeGateCSV();
+		}while (true);
 	}
 
 	@Override
 	public void updateMapFromStammdatenAlleCSV() {
-		log.info("Calling from schedular to read file data from stammdaten alle csv file and update in map.");
+		log.info("Calling from scheduler to read file data from stammdaten alle csv file and update in map.");
 		stammdatenAlleMap = fileReadingUtility.readFileDataFromStammdatenAlleCSV();
 	}
 
 	@Override
 	public void updateMapFromPeerGroupsCSV() {
-		log.info("Calling from schedular to read file data from peer groups csv file and update in map.");
+		log.info("Calling from scheduler to read file data from peer groups csv file and update in map.");
 		peerGroupsMap = fileReadingUtility.readFileDataFromPeerGroupsCSV();
 	}
 
 	@Override
 	public void updateMapFromErgebnisCSV() {
-		log.info("Calling from schedular to read file data from ergebnis csv file and update in map.");
-		ergebnisMap = fileReadingUtility.readFileDataFromErgebnisCSV();
+		do {
+			log.info("Calling from scheduler to read file data from ergebnis csv file and update in map.");
+			ergebnisMap.clear();
+			ergebnisMap = fileReadingUtility.readFileDataFromErgebnisCSV();
+		}while(true);
 	}
 	
 	@Override
@@ -122,8 +134,6 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 			
 			derivative = stammdatenAlleMap.get(derivateKey);
 			if(derivative != null) {
-				if(ergebnisMap.size() == 0) 
-					updateMapFromErgebnisCSV();
 				derivative.setAsk(ergebnisMap.get(derivateKey) != null ? ergebnisMap.get(derivateKey).getAsk() : Double.valueOf(0));
 				derivative.setBid(ergebnisMap.get(derivateKey) != null ? ergebnisMap.get(derivateKey).getBid() : Double.valueOf(0));
 			}
@@ -169,17 +179,11 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 
 	@Override
 	public Derivative getErgebnisDataByKey(String ergebnisKey) {
-		log.info("Find the ergebnis data from map by ergebnis key : "+ergebnisKey);
-		if(ergebnisMap.size() == 0)
-			updateMapFromErgebnisCSV();
 		return ergebnisMap.get(ergebnisKey);
 	}
 
 	@Override
 	public UnderLying getTradeGateDataByKey(String tradeKey) {
-		log.info("Find the trade gate data from map by trade key : "+tradeKey);
-		if(tradeGateMap.size() == 0)
-			updateMapFromTradeGateCSV();
 		return tradeGateMap.get(tradeKey);
 	}
 
@@ -191,7 +195,16 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 				if(StringUtils.isNotBlank(derivateKey)) {
 					derivative = getDerivateDataByKey(derivateKey);
 					if(derivative != null && StringUtils.isNotBlank(derivative.getU_isin()) && derivative.getValdate() != null) {
-						double derivativeAsk = derivative.getAsk()/derivative.getBv();
+						double currencyAsk = 0d;
+						double derivativeAsk = 0d;
+						if(StringUtils.isNotBlank(derivative.getCur())){
+							if(derivative.getCur().equalsIgnoreCase(DerivateMeasureConstant.DERIVATE_CURRENCY_USD)){
+								currencyAsk = ergebnisFxvwdMap.get(getCurrencyKeyByDerivateCurrency(derivative.getCur())).getAsk();
+								derivativeAsk = (derivative.getAsk()*currencyAsk)/derivative.getBv();
+							}else{
+								derivativeAsk = derivative.getAsk()/derivative.getBv();
+							}
+						}
 						double cap = derivative.getCap();
 						double underlyingAsk = getTradeGateDataByKey(derivative.getU_isin()).getAsk();
 						long restDays = TimeUnit.DAYS.convert(derivative.getValdate().getTime() - new Date().getTime(), TimeUnit.MILLISECONDS);
@@ -205,6 +218,16 @@ public class DerivateMeasureReadFilesImpl implements DerivateMeasureReadFiles{
 			log.error("Error getting while calculate derivate and underlying value : ",e);
 		}
 		return derivative;
+	}
+
+	private String getCurrencyKeyByDerivateCurrency(String cur) {
+		return ergebnisFxvwdMap.keySet().stream().filter(entity -> entity.contains(cur)).collect(Collectors.toList()).get(0);
+	}
+
+	@Override
+	public synchronized void updateMapFromErgebnisFxvwdCSV() {
+		log.info("Calling from scheduler to read file data from ergebnis fxvwd csv file and update in map.");
+		ergebnisFxvwdMap = fileReadingUtility.readFileDataFromErgebnisFxvwdCSV();
 	}
 
 	private synchronized double calculateAnnualRate(double calculateRate, long restDays) {

@@ -1,17 +1,11 @@
 package com.derivatemeasure.portal.Util;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import org.apache.commons.lang3.ArrayUtils;
+import com.derivatemeasure.portal.Model.Currency;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +81,7 @@ public class FileReadingUtilityImpl implements FileReadingUtility{
 				log.info("Done reading stammdaten alle csv file data and timestamp : " + LocalDateTime.now());
 			} catch (Exception e) {
 				log.error("Error getting while reading data from stammdaten alle csv file :", e);
-			} 
+			}
 			return map;
 		}
 	}
@@ -110,37 +104,68 @@ public class FileReadingUtilityImpl implements FileReadingUtility{
 			return map;
 		}
 	}
-	
+
 	@Override
 	public Map<String, Derivative> readFileDataFromErgebnisCSV() {
 		synchronized (this) {
 			log.info("Start reading ergebnis csv file data and timestamp : " + LocalDateTime.now());
-			CSVReader csvReader = null;
 			Map<String, Derivative> map = null;
-			String[] line;
-			try (FileReader fileReader = new FileReader(new File(derivateMeasureFilePath + "\\" + DerivateMeasureConstant.DERIVATE_MEASURE_ERGEBNIS))){
+			String line;
+			try (BufferedReader bufferedReader = new BufferedReader(new FileReader(ResourceUtils.getFile(derivateMeasureFilePath + "\\" + DerivateMeasureConstant.DERIVATE_MEASURE_ERGEBNIS)))){
 				map = new HashMap<>();
-				CSVParser csvParser = new CSVParserBuilder().withSeparator(';').build();
-				csvReader = new CSVReaderBuilder(fileReader).withCSVParser(csvParser).build();
-				while ((line = csvReader.readNext()) != null) {
-					map.put(line[0], new Derivative(line[0], Double.parseDouble(line[1]), Double.parseDouble(line[4])));
+				while ((line = bufferedReader.readLine()) != null) {
+					String ergebnis[] = line.split(";");
+					map.put(ergebnis[0], new Derivative(ergebnis[0], Double.parseDouble(ergebnis[1]), Double.parseDouble(ergebnis[4])));
 				}
 				log.info("Done reading ergebnis csv file data and timestamp : " + LocalDateTime.now());
 			} catch (Exception e) {
 				log.error("Error getting while reading data from ergebnis csv file :", e);
-			} finally {
-				try {
-					if (csvReader != null) {
-						csvReader.close();
-					}
-				} catch (IOException e) {
-					log.error("Error getting while close costly resource of trade gate method :",e);
-				}
 			}
 			return map;
 		}
 	}
-	
+
+	@Override
+	public Map<String, Currency> readFileDataFromErgebnisFxvwdCSV() {
+		synchronized (this) {
+			log.info("Start reading ergebnis fxvwd csv file data and timestamp : " + LocalDateTime.now());
+			Map<String, Currency> map = null;
+			String line;
+			try (BufferedReader bufferedReader = new BufferedReader(new FileReader(ResourceUtils.getFile(derivateMeasureFilePath + "\\" + DerivateMeasureConstant.DERIVATE_MEASURE_ERGEBNIS_FXVWD)))){
+				map = new HashMap<>();
+				while ((line = bufferedReader.readLine()) != null) {
+					Currency currency = getPopulateCurrencyObject(line);
+					map.put(currency.getKey(), currency);
+				}
+				log.info("Done reading ergebnis fxvwd csv file data and timestamp : " + LocalDateTime.now());
+			} catch (Exception e) {
+				log.error("Error getting while reading data from ergebnis fxvwd csv file :", e);
+			}
+			return map;
+		}
+	}
+
+	private Currency getPopulateCurrencyObject(String line) {
+		Currency currency = null;
+		try {
+			if(StringUtils.isNotBlank(line)) {
+				String lineSeprate[] = line.split(";");
+				currency = new Currency();
+				currency.setIsin(StringUtils.isNotBlank(lineSeprate[0]) ? lineSeprate[0] : "");
+				currency.setWkn(StringUtils.isBlank(lineSeprate[1]) ? Long.MIN_VALUE : Long.valueOf(lineSeprate[1]));
+				currency.setAsk(StringUtils.isBlank(lineSeprate[2]) ? Double.NaN : Double.valueOf(lineSeprate[2]));
+				currency.setAskSize(StringUtils.isBlank(lineSeprate[3]) ? Integer.MIN_VALUE : Integer.valueOf(lineSeprate[3]));
+				currency.setBid(StringUtils.isBlank(lineSeprate[4]) ? Double.NaN : Double.valueOf(lineSeprate[4]));
+				currency.setBidSize(StringUtils.isBlank(lineSeprate[5]) ? Integer.MIN_VALUE : Integer.valueOf(lineSeprate[5]));
+				currency.setTimestamp(StringUtils.isBlank(lineSeprate[6]) ? Long.MIN_VALUE : Long.valueOf(lineSeprate[6]));
+				currency.setKey(StringUtils.isNotBlank(lineSeprate[7]) ? lineSeprate[7] : "");
+			}
+		}catch (Exception e){
+			log.error("Error getting while populate currency object :", e);
+		}
+		return currency;
+	}
+
 	private Derivative populateDerivative(String line) {
 		Derivative derivative = null;
 		boolean dateEightPosition = false;

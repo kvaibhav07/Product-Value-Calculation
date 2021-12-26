@@ -14,7 +14,6 @@ import com.derivatemeasure.portal.Business.DerivateMeasureReadFiles;
 import com.google.gson.GsonBuilder;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -30,13 +29,6 @@ public class DerivateMeasureController {
 	@Autowired
 	private DerivateFilterResponse derivateFilterResponse;
 	
-	@GetMapping("/alltradegate")
-    public String getAllTradegate() {
-        log.info("Getting trade gate data and convert into json.");
-        return new GsonBuilder().serializeNulls().create()
-		.toJsonTree(deeDerivateMeasureReadFiles.getFileDataFromTradeGateCSV()).toString();
-    }
-	
 	@GetMapping("/allderivatives")
     public String getAllStammdatenAlle(@RequestParam(required = false, defaultValue = "1") long from, @RequestParam(required = false, defaultValue = "100") long limit) {
         if(from > 0 && limit > 0) {
@@ -49,28 +41,17 @@ public class DerivateMeasureController {
     }
 	
 	@GetMapping("/allpeergroups")
-    public String getAllPeerGroups() {
+    public String getAllPeerGroups(@RequestParam(required = false, defaultValue = "1") long from, @RequestParam(required = false, defaultValue = "100") long limit) {
         log.info("Getting peer groups data and convert into json.");
         return new GsonBuilder().serializeNulls().create()
-		.toJsonTree(deeDerivateMeasureReadFiles.getFileDataFromPeerGroupsCSV()).toString();
+		.toJsonTree(deeDerivateMeasureReadFiles.getFileDataFromPeerGroupsCSV().keySet().stream().skip(from).limit(limit).collect(Collectors.toList())).toString();
     }
-	
-	@GetMapping("/allergebnis")
-    public String getAllErgebnis() {
-        log.info("Getting ergebnis data and convert into json.");
-        return new GsonBuilder().serializeNulls().create()
-		.toJsonTree(deeDerivateMeasureReadFiles.getFileDataFromErgebnisCSV()).toString();
-    }
-	
-	@GetMapping("/derivativebyderivatekey")
-	public String getDerivative(@RequestParam(required = false, defaultValue = "") String derivativeKey) {
-		if(StringUtils.isNotBlank(derivativeKey)) {
-			log.info("Getting derivate data from map by key : " + derivativeKey + " and convert into json.");
-			return new GsonBuilder().serializeNulls().create()
-					.toJsonTree(deeDerivateMeasureReadFiles.getDerivateDataByKey(derivativeKey)).toString();
-		}else {
-			return "Derivative key is blank : "+derivativeKey;
-		}
+
+	@GetMapping("/allcurrency")
+	public String getAllCurrency(@RequestParam(required = false, defaultValue = "1") long from, @RequestParam(required = false, defaultValue = "100") long limit) {
+		log.info("Getting peer groups data and convert into json.");
+		return new GsonBuilder().serializeNulls().create()
+				.toJsonTree(deeDerivateMeasureReadFiles.getFileDataFromErgebnisFxvwdCSV().values().stream().skip(from).limit(limit).collect(Collectors.toList())).toString();
 	}
 	
 	@GetMapping("/peergroupbypeerkey")
@@ -96,7 +77,7 @@ public class DerivateMeasureController {
 	}
 	
 	@GetMapping("/ergebnisbyergebniskey")
-	public String getErgebnis(@RequestParam(required = false, defaultValue = "") String ergebnisKey) {
+	public String getErgebnis(@RequestParam(required = false, defaultValue = "") String ergebnisKey) throws InterruptedException {
 		if(StringUtils.isNotBlank(ergebnisKey)) {
 			log.info("Getting ergebnis data from map by key : " + ergebnisKey + " and convert into json.");
 			return new GsonBuilder().serializeNulls().create()
@@ -107,7 +88,7 @@ public class DerivateMeasureController {
 	}
 	
 	@GetMapping("/tradegatebytradeKey")
-	public String getTradeGate(@RequestParam(required = false, defaultValue = "") String tradeKey) {
+	public String getTradeGate(@RequestParam(required = false, defaultValue = "") String tradeKey) throws InterruptedException {
 		if(StringUtils.isNotBlank(tradeKey)) {
 			log.info("Getting trade gate data from map by key : " + tradeKey + " and convert into json.");
 			return new GsonBuilder().serializeNulls().create()
@@ -117,7 +98,7 @@ public class DerivateMeasureController {
 		}
 	}
 	
-	@GetMapping("/calculatederivateratebyderivatekey")
+	@GetMapping("/wkn")
 	public String calculateDerivateRate(@RequestParam(required = false, defaultValue = "") String derivativeKey) {
 		if(StringUtils.isNotBlank(derivativeKey)) {
 			log.info("Getting calculation of derivate rate by key : " + derivativeKey);
@@ -128,8 +109,9 @@ public class DerivateMeasureController {
 		}
 	}
 
-	@GetMapping("/derivateratelistbyderivateparameterkey")
-	public String getDerivateListByDerivateParameterKey(@RequestParam(required = false, defaultValue = "") String filterIsin,
+	@GetMapping("/filterderivates")
+	public String getDerivateListByDerivateParameterKey(@RequestParam(required = false, defaultValue = "") String type,
+														@RequestParam(required = false, defaultValue = "") String filterIsin,
 														@RequestParam(required = false, defaultValue = "") String filterWkn,
 														@RequestParam(required = false, defaultValue = "") String filterUisin,
 														@RequestParam(required = false, defaultValue = "") String filterEmi,
@@ -143,14 +125,16 @@ public class DerivateMeasureController {
 														@RequestParam(required = false, defaultValue = "") String filterSidewaysReturnPa,
 														@RequestParam(required = false, defaultValue = "") String filterMatDate,
 														@RequestParam(required = false, defaultValue = "") String filterValDate,
+														@RequestParam(required = false, defaultValue = "") String sortByField,
+														@RequestParam(required = false, defaultValue = "") String order,
 														@RequestParam(required = false, defaultValue = "0") long from,
 														@RequestParam(required = false, defaultValue = "50") long limit) {
 		Map<String, String> map = new HashMap<>();
-		map = derivateFilterResponse.getDerivateStringListByDerivateStringField(filterIsin, filterWkn, filterUisin, filterEmi, filterCur, filterQuanto, filterExec, filterBv, filterCap, filterAsk, filterBid, filterSidewaysReturnPa, filterMatDate, filterValDate);
+		map = derivateFilterResponse.getDerivateStringListByDerivateStringField(type, filterIsin, filterWkn, filterUisin, filterEmi, filterCur, filterQuanto, filterExec, filterBv, filterCap, filterAsk, filterBid, filterSidewaysReturnPa, filterMatDate, filterValDate);
 		if(!map.isEmpty()) {
 			log.info("Getting derivate list of derivate parameter by key list : " + map+" form value is : "+from+" and limit is : "+limit);
 			return new GsonBuilder().serializeNulls().create()
-					.toJsonTree(derivateFilterResponse.getDerivateListByDerivateParameterKey(map, from, limit)).toString();
+					.toJsonTree(derivateFilterResponse.getDerivateListByDerivateParameterKey(map, sortByField, order, from, limit)).toString();
 		}else {
 			return "Derivate key is blank while doing calculation of derivate rate by key list : " + map;
 		}

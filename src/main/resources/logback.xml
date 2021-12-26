@@ -2,7 +2,7 @@
 <configuration>
 
 	<property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n" />
-    <property name="APP_LOG_ROOT" value="C:\\Users\\Hp\\Desktop\\derivatemeasures\\"/>
+    <property name="APP_LOG_ROOT" value="D:\\projectupwork\\log\\derivatemeasures\\"/>
     
    
      <appender name="DerivateMeasures" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -94,6 +94,21 @@
             <maxFileSize>10MB</maxFileSize>
         </triggeringPolicy>
     </appender>
+
+    <appender name="DerivateMeasureListener" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${APP_LOG_ROOT}DerivateMeasureListener.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${APP_LOG_ROOT}DerivateMeasureListener-%i.log</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>10</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>10MB</maxFileSize>
+        </triggeringPolicy>
+    </appender>
     
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     	<layout class="ch.qos.logback.classic.PatternLayout">
@@ -101,7 +116,7 @@
     	</layout>
 	</appender>
 	
-	<logger name="com.derivatemeasure.portal.Util.FileReadingUtility" additivity="false" level="debug">
+	<logger name="com.derivatemeasure.portal.Util.FileReadingUtilityImpl" additivity="false" level="debug">
 	    <appender-ref ref="FileReadingUtility" />
 	</logger>
 	
@@ -119,6 +134,10 @@
 
     <logger name="com.derivatemeasure.portal.Business.DerivateFilterResponseImpl" additivity="false" level="debug">
         <appender-ref ref="DerivateFilterResponseImpl" />
+    </logger>
+
+    <logger name="com.derivatemeasure.portal.Listener.DerivateMeasureListener" additivity="false" level="debug">
+        <appender-ref ref="DerivateMeasureListener" />
     </logger>
 	
 	<root level="debug">
