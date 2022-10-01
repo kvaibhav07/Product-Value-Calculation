@@ -1,4 +1,4 @@
-#Derivate Measures
+#Product Value Calculation
 
 ### Used tool in project :
 - JDK 11
@@ -11,14 +11,14 @@
 
 ### Project Structure :
 ####Java Packages :
-- com.derivatemeasure.portal.Business(Calculate the requirement)
-- com.derivatemeasure.portal.Constant(Keep constant value)
-- com.derivatemeasure.portal.Controller(Rest API call)
-- com.derivatemeasure.portal.DerivateMeasures(Spring boot main class)
-- com.derivatemeasure.portal.Listener(Start one time task)
-- com.derivatemeasure.portal.Model(Java object fields)
-- com.derivatemeasure.portal.Schedular(Schedule task)
-- com.derivatemeasure.portal.Util(Project utility)
+- com.productcalculation.portal.Business(Calculate the requirement)
+- com.productcalculation.portal.Constant(Keep constant value)
+- com.productcalculation.portal.Controller(Rest API call)
+- com.productcalculation.portal.DerivateMeasures(Spring boot main class)
+- com.productcalculation.portal.Listener(Start one time task)
+- com.productcalculation.portal.Model(Java object fields)
+- com.productcalculation.portal.Schedular(Schedule task)
+- com.productcalculation.portal.Util(Project utility)
 
 ### Java Resource :
 - application.properties(Configuration of project)
